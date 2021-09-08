@@ -1,0 +1,14 @@
+[package]
+name = "licenseptium"
+version = "0.1.0"
+authors = ["Himmet Karahan Buhan <contact@karahanbuhan.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4.0.0-beta.8"
+tokio-postgres = { version = "0.7.2", features = ["with-uuid-0_8"] }
+deadpool-postgres = "0.9.0"
+serde = { version = "1.0.104", features = ["derive"] }
+uuid = "0.8"
