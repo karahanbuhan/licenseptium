@@ -1,19 +1,15 @@
 use std::str::FromStr;
 
 use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
-use deadpool_postgres::{Config, Pool};
-use licenseptium::create_tables;
+use deadpool_postgres::Pool;
+use licenseptium::{create_tables, Config};
 use tokio_postgres::NoTls;
 use uuid::Uuid;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let mut cfg = Config::new();
-    cfg.dbname = Some("licenseptium".to_owned());
-    cfg.user = Some("kara".to_owned());
-    cfg.password = Some("Ev235984".to_owned());
-    let pool = cfg.create_pool(NoTls).unwrap();
-
+    let cfg = Config::from_env().unwrap();
+    let pool = cfg.pg.create_pool(NoTls).unwrap();
     create_tables(pool.get().await.unwrap()).await.unwrap();
 
     HttpServer::new(move || {

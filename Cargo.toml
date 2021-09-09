@@ -12,3 +12,4 @@ tokio-postgres = { version = "0.7.2", features = ["with-uuid-0_8"] }
 deadpool-postgres = "0.9.0"
 serde = { version = "1.0.104", features = ["derive"] }
 uuid = "0.8"
+config = "0.11.0"
