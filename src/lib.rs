@@ -98,13 +98,14 @@ pub mod error {
     impl ValidationError {
         pub fn name(&self) -> String {
             match self {
-                Self::IPAddressNotFound => "IPAddressNotFound".to_owned(),
-                Self::BadIPVersion => "BadIPVersion".to_owned(),
-                Self::MalformedKey => "MalformedKey".to_owned(),
-                Self::DatabaseError => "DatabaseError".to_owned(),
-                Self::InvalidKey => "InvalidKey".to_owned(),
-                Self::ExpiredKey => "ExpiredKey".to_owned(),
+                Self::IPAddressNotFound => "IPAddressNotFound",
+                Self::BadIPVersion => "BadIPVersion",
+                Self::MalformedKey => "MalformedKey",
+                Self::DatabaseError => "DatabaseError",
+                Self::InvalidKey => "InvalidKey",
+                Self::ExpiredKey => "ExpiredKey",
             }
+            .to_owned()
         }
     }
 
