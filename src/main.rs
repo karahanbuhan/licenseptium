@@ -1,8 +1,9 @@
-use std::{cmp::Ordering, str::FromStr};
-
-use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer};
 use deadpool_postgres::Pool;
-use licenseptium::{config::Config, database::create_tables, date::DateTimePlus};
+use licenseptium::{
+    config::Config, database::create_tables, date::DateTimePlus, error::ValidationError,
+};
+use serde_json::json;
 use tokio_postgres::NoTls;
 use uuid::Uuid;
 
@@ -26,63 +27,43 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 
-#[get("validate/{key}")]
+#[get("/validate/{key}")]
 async fn validate(
     req: HttpRequest,
     key: web::Path<String>,
     pool: web::Data<Pool>,
-) -> impl Responder {
-    // Get IPv4 Address
-    if req.peer_addr().is_none() {
-        return HttpResponse::BadRequest();
-    }
-    let ipv4_addr = req.peer_addr().unwrap();
-    if !ipv4_addr.is_ipv4() {
-        return HttpResponse::BadRequest();
-    }
-    let ipv4_addr = ipv4_addr.ip();
+) -> Result<HttpResponse, ValidationError> {
+    let sock_addr = req.peer_addr().ok_or(ValidationError::IPAddressNotFound)?;
+    let ipv4_addr = sock_addr
+        .is_ipv4()
+        .then(|| sock_addr.ip())
+        .ok_or(ValidationError::BadIPVersion)?;
 
-    // Check if key format is UUID
-    let key = Uuid::from_str(&key.replace("-", ""));
-    if key.is_err() {
-        return HttpResponse::BadRequest();
-    }
-    let key = key.unwrap();
+    let key = Uuid::parse_str(&key).or(Err(ValidationError::MalformedKey))?;
 
-    // Get new client from database pool
-    let client = pool.get().await;
-    if client.is_err() {
-        return HttpResponse::InternalServerError();
-    }
-    let client = client.unwrap();
+    let client = pool
+        .get()
+        .await
+        .map_err(|_| ValidationError::DatabaseError)?;
 
-    // Get license row by key
     let rows = client
         .query("SELECT id, expiry_date FROM licenses WHERE key=$1", &[&key])
         .await
-        .unwrap();
-    // Return forbidden if license does not exist
-    if rows.len() == 0 {
-        return HttpResponse::Forbidden();
-    }
-
-    let row = &rows[0];
+        .map_err(|_| ValidationError::DatabaseError)?;
+    let row = rows.first().ok_or(ValidationError::InvalidKey)?;
     let id: i32 = row.get("id");
     let expiry_date: DateTimePlus = row.get("expiry_date");
 
-    // Return forbidden if license has expired
-    if expiry_date.0.cmp(&chrono::offset::Utc::now()) == Ordering::Less {
-        return HttpResponse::Forbidden();
+    if expiry_date.0.cmp(&chrono::offset::Utc::now()).is_lt() {
+        return Err(ValidationError::ExpiredKey);
     }
 
-    // Insert validations into table
     client
-            .execute(
-                "INSERT INTO validations(ipv4_address, license_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-                &[&ipv4_addr, &id],
-            )
-            .await
-            .unwrap();
+        .execute(
+            "INSERT INTO validations(ipv4_address, license_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            &[&ipv4_addr, &id],
+        )
+        .await.map_err(|_| ValidationError::DatabaseError)?;
 
-    HttpResponse::Ok()
+    Ok(HttpResponse::Ok().json(json!({"checksum": "todo"})))
 }
