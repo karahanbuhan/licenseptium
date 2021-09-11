@@ -48,7 +48,7 @@ async fn validate(
 
     let rows = client
         .query(
-            "SELECT id, ip_limit, expiry_date FROM licenses WHERE key=$1",
+            "SELECT id, ip_limit, expires_at FROM licenses WHERE key=$1",
             &[&key],
         )
         .await
@@ -56,7 +56,7 @@ async fn validate(
     let row = rows.first().ok_or(ValidationError::InvalidKey)?;
     let id: i32 = row.get("id");
     let ip_limit: i32 = row.get("ip_limit");
-    let expiry_date: DateTimePlus = row.get("expiry_date");
+    let expires_at: DateTimePlus = row.get("expires_at");
 
     let rows = client
         .query(
@@ -74,7 +74,7 @@ async fn validate(
         return Err(ValidationError::ReachedActivationLimit);
     }
 
-    if expiry_date.0.cmp(&chrono::offset::Utc::now()).is_lt() {
+    if expires_at.0.cmp(&chrono::offset::Utc::now()).is_lt() {
         return Err(ValidationError::ExpiredKey);
     }
 

@@ -29,7 +29,8 @@ pub mod database {
                     key             UUID UNIQUE NOT NULL,                
                     comment         TEXT NOT NULL,
                     ip_limit        INTEGER DEFAULT 1 NOT NULL,
-                    expiry_date     TIMESTAMPTZ DEFAULT 'infinity'::timestamptz NOT NULL
+                    expires_at      TIMESTAMPTZ DEFAULT 'infinity'::timestamptz NOT NULL,
+                    created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
                 )"#,
             )
             .await?;
