@@ -47,12 +47,32 @@ async fn validate(
         .map_err(|_| ValidationError::DatabaseError)?;
 
     let rows = client
-        .query("SELECT id, expiry_date FROM licenses WHERE key=$1", &[&key])
+        .query(
+            "SELECT id, ip_limit, expiry_date FROM licenses WHERE key=$1",
+            &[&key],
+        )
         .await
         .map_err(|_| ValidationError::DatabaseError)?;
     let row = rows.first().ok_or(ValidationError::InvalidKey)?;
     let id: i32 = row.get("id");
+    let ip_limit: i32 = row.get("ip_limit");
     let expiry_date: DateTimePlus = row.get("expiry_date");
+
+    let rows = client
+        .query(
+            "SELECT COUNT(*) FROM validations WHERE ipv4_address!=$1 AND license_id=$2",
+            &[&ipv4_addr, &id],
+        )
+        .await
+        .map_err(|_| ValidationError::DatabaseError)?;
+    let count: i64 = rows
+        .first()
+        .ok_or(ValidationError::DatabaseError)?
+        .get("count");
+
+    if count >= ip_limit as i64 {
+        return Err(ValidationError::ReachedActivationLimit);
+    }
 
     if expiry_date.0.cmp(&chrono::offset::Utc::now()).is_lt() {
         return Err(ValidationError::ExpiredKey);

@@ -28,7 +28,8 @@ pub mod database {
                     id              SERIAL PRIMARY KEY,
                     key             UUID UNIQUE NOT NULL,                
                     comment         TEXT NOT NULL,
-                    expiry_date     TIMESTAMPTZ NOT NULL
+                    ip_limit        INTEGER DEFAULT 1 NOT NULL,
+                    expiry_date     TIMESTAMPTZ DEFAULT 'infinity'::timestamptz NOT NULL
                 )"#,
             )
             .await?;
@@ -37,7 +38,9 @@ pub mod database {
                 r#"
                 CREATE TABLE IF NOT EXISTS validations (
                     ipv4_address    INET NOT NULL,
-                    license_id      SERIAL NOT NULL,
+                    license_id      SERIAL NOT NULL,                    
+                    activated_at    TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                    
                     PRIMARY KEY (ipv4_address, license_id)
                 )"#,
             )
@@ -91,6 +94,8 @@ pub mod error {
         DatabaseError,
         #[error("This license key is invalid")]
         InvalidKey,
+        #[error("This key have already reached the maximum allowed number of activations")]
+        ReachedActivationLimit,
         #[error("This license key has expired")]
         ExpiredKey,
     }
@@ -103,6 +108,7 @@ pub mod error {
                 Self::MalformedKey => "MalformedKey",
                 Self::DatabaseError => "DatabaseError",
                 Self::InvalidKey => "InvalidKey",
+                Self::ReachedActivationLimit => "ReachedActivationLimit",
                 Self::ExpiredKey => "ExpiredKey",
             }
             .to_owned()
@@ -117,6 +123,7 @@ pub mod error {
                 Self::MalformedKey => StatusCode::BAD_REQUEST,
                 Self::DatabaseError => StatusCode::INTERNAL_SERVER_ERROR,
                 Self::InvalidKey => StatusCode::FORBIDDEN,
+                Self::ReachedActivationLimit => StatusCode::FORBIDDEN,
                 Self::ExpiredKey => StatusCode::FORBIDDEN,
             }
         }
