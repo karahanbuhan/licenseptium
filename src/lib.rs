@@ -86,23 +86,23 @@ pub mod error {
 
     #[derive(Debug, Error)]
     pub enum ValidationError {
-        #[error("IP address of the validator was not found")]
+        #[error("You need an IP address to validate")]
         IPAddressNotFound,
-        #[error("IP address of the validator is not IPv4")]
+        #[error("IPv4 must be used to validate")]
         BadIPVersion,
-        #[error("Key sent by the validator is not UUID")]
+        #[error("License key format is not correct")]
         MalformedKey,
-        #[error("This license key is invalid")]
+        #[error("License key is invalid")]
         InvalidKey,
-        #[error("Cannot access to the database")]
+        #[error("Internal database error, try again later")]
         DatabaseError,
-        #[error("This key have already reached the maximum allowed number of activations")]
+        #[error("License key has already reached the maximum allowed number of activations")]
         ReachedActivationLimit,
-        #[error("Checksum must be in hexadecimal string format")]
+        #[error("License checksum format is not correct")]
         MalformedChecksum,
-        #[error("Checksum does not match")]
+        #[error("License checksum is invalid")]
         InvalidChecksum,
-        #[error("This license key has expired")]
+        #[error("License key has expired")]
         ExpiredKey,
     }
 
