@@ -29,6 +29,7 @@ pub mod database {
                     key             UUID UNIQUE NOT NULL,                
                     comment         TEXT NOT NULL,
                     ip_limit        INTEGER DEFAULT 1 NOT NULL,
+                    checksum        BYTEA NOT NULL,
                     expires_at      TIMESTAMPTZ DEFAULT 'infinity'::timestamptz NOT NULL,
                     created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
                 )"#,
@@ -91,12 +92,16 @@ pub mod error {
         BadIPVersion,
         #[error("Key sent by the validator is not UUID")]
         MalformedKey,
-        #[error("Cannot access to the database")]
-        DatabaseError,
         #[error("This license key is invalid")]
         InvalidKey,
+        #[error("Cannot access to the database")]
+        DatabaseError,
         #[error("This key have already reached the maximum allowed number of activations")]
         ReachedActivationLimit,
+        #[error("Checksum must be in hexadecimal string format")]
+        MalformedChecksum,
+        #[error("Checksum does not match")]
+        InvalidChecksum,
         #[error("This license key has expired")]
         ExpiredKey,
     }
@@ -107,9 +112,11 @@ pub mod error {
                 Self::IPAddressNotFound => "IPAddressNotFound",
                 Self::BadIPVersion => "BadIPVersion",
                 Self::MalformedKey => "MalformedKey",
-                Self::DatabaseError => "DatabaseError",
                 Self::InvalidKey => "InvalidKey",
+                Self::DatabaseError => "DatabaseError",
                 Self::ReachedActivationLimit => "ReachedActivationLimit",
+                Self::MalformedChecksum => "MalformedChecksum",
+                Self::InvalidChecksum => "InvalidChecksum",
                 Self::ExpiredKey => "ExpiredKey",
             }
             .to_owned()
@@ -122,9 +129,11 @@ pub mod error {
                 Self::IPAddressNotFound => StatusCode::BAD_REQUEST,
                 Self::BadIPVersion => StatusCode::BAD_REQUEST,
                 Self::MalformedKey => StatusCode::BAD_REQUEST,
-                Self::DatabaseError => StatusCode::INTERNAL_SERVER_ERROR,
                 Self::InvalidKey => StatusCode::FORBIDDEN,
+                Self::DatabaseError => StatusCode::INTERNAL_SERVER_ERROR,
                 Self::ReachedActivationLimit => StatusCode::FORBIDDEN,
+                Self::MalformedChecksum => StatusCode::BAD_REQUEST,
+                Self::InvalidChecksum => StatusCode::FORBIDDEN,
                 Self::ExpiredKey => StatusCode::FORBIDDEN,
             }
         }

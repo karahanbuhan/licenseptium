@@ -1,8 +1,13 @@
-use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{
+    get,
+    web::{self},
+    App, HttpRequest, HttpResponse, HttpServer,
+};
 use deadpool_postgres::Pool;
 use licenseptium::{
     config::Config, database::create_tables, date::DateTimePlus, error::ValidationError,
 };
+use serde::Deserialize;
 use serde_json::json;
 use tokio_postgres::NoTls;
 use uuid::Uuid;
@@ -27,10 +32,16 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 
-#[get("/validate/{key}")]
+#[derive(Deserialize)]
+struct ValidationArgs {
+    key: String,
+    checksum: String,
+}
+
+#[get("/validate/{key}/{checksum}")]
 async fn validate(
     req: HttpRequest,
-    key: web::Path<String>,
+    args: web::Path<ValidationArgs>,
     pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ValidationError> {
     let sock_addr = req.peer_addr().ok_or(ValidationError::IPAddressNotFound)?;
@@ -39,7 +50,7 @@ async fn validate(
         .then(|| sock_addr.ip())
         .ok_or(ValidationError::BadIPVersion)?;
 
-    let key = Uuid::parse_str(&key).or(Err(ValidationError::MalformedKey))?;
+    let key = Uuid::parse_str(&args.key).or(Err(ValidationError::MalformedKey))?;
 
     let client = pool
         .get()
@@ -48,7 +59,7 @@ async fn validate(
 
     let rows = client
         .query(
-            "SELECT id, ip_limit, expires_at FROM licenses WHERE key=$1",
+            "SELECT id, ip_limit, expires_at, checksum FROM licenses WHERE key=$1",
             &[&key],
         )
         .await
@@ -57,6 +68,7 @@ async fn validate(
     let id: i32 = row.get("id");
     let ip_limit: i32 = row.get("ip_limit");
     let expires_at: DateTimePlus = row.get("expires_at");
+    let checksum: Vec<u8> = row.get("checksum");
 
     let rows = client
         .query(
@@ -78,6 +90,10 @@ async fn validate(
         return Err(ValidationError::ExpiredKey);
     }
 
+    if checksum != hex::decode(&args.checksum).map_err(|_| ValidationError::MalformedChecksum)? {
+        return Err(ValidationError::InvalidChecksum);
+    }
+
     client
         .execute(
             "INSERT INTO validations(ipv4_address, license_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
@@ -85,5 +101,5 @@ async fn validate(
         )
         .await.map_err(|_| ValidationError::DatabaseError)?;
 
-    Ok(HttpResponse::Ok().json(json!({"checksum": "todo"})))
+    Ok(HttpResponse::Ok().json(json!({ "key": &args.key, "checksum": &args.checksum })))
 }
