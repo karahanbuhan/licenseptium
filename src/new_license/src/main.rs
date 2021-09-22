@@ -5,12 +5,12 @@ use licenseptium::{config::Config, database::create_tables, print_logo};
 use tokio_postgres::NoTls;
 use uuid::Uuid;
 
-#[actix_web::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     print_logo();
 
     let input = read_input().unwrap_or_else(|e| {
-        println!("Error: {}", e);
+        println!("{}", e);
         process::exit(0);
     });
 
