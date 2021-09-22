@@ -19,7 +19,7 @@ async fn main() -> std::io::Result<()> {
     let pool = cfg.pg.create_pool(NoTls).unwrap();
 
     // Create default tables if not exists
-    create_tables(pool.get().await.unwrap()).await.unwrap();
+    create_tables(&pool.get().await.unwrap()).await.unwrap();
 
     // Start actix server
     HttpServer::new(move || {

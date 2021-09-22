@@ -20,7 +20,7 @@ pub mod database {
     use deadpool_postgres::tokio_postgres::error::Error;
     use deadpool_postgres::Client;
 
-    pub async fn create_tables(client: Client) -> Result<(), Error> {
+    pub async fn create_tables(client: &Client) -> Result<(), Error> {
         client
             .simple_query(
                 r#"
@@ -155,4 +155,8 @@ pub mod error {
         error: String,
         message: String,
     }
+}
+
+pub fn print_logo() {
+    println!("Licenseptium 1.0.0; Copyright (C) 2021 H. Karahan Buhan\n");
 }

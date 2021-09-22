@@ -1,10 +1,12 @@
 [package]
 name = "licenseptium"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Himmet Karahan Buhan <contact@karahanbuhan.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "new_license"
+path = "src/new_license/src/main.rs"
 
 [dependencies]
 actix-web = "4.0.0-beta.8"
@@ -16,7 +18,7 @@ deadpool-postgres = "0.9.0"
 serde = { version = "1.0.104", features = ["derive"] }
 serde_json = "1.0.67"
 chrono = "0.4.19"
-uuid = "0.8.2"
+uuid = { version = "0.8.2", features = ["v4"] }
 config = "0.11.0"
 thiserror = "1.0.29"
 sha2 = "0.9.8"
